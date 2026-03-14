@@ -1,6 +1,6 @@
 import requests
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import calendar
 import os
 
@@ -17,10 +17,12 @@ last_day = calendar.monthrange(today.year, today.month)[1]
 
 events = []
 
+def send(msg):
+    requests.post(WEBHOOK, json={"text": msg})
+
 for url in urls:
 
-    response = requests.get(url)
-    text = response.text
+    text = requests.get(url).text
     lines = text.split("\n")
 
     for line in lines:
@@ -39,17 +41,37 @@ for url in urls:
 
         event_date = datetime(today.year, month, day).date()
 
-        if today <= event_date <= datetime(today.year, month, last_day).date():
+        events.append((event_date, line.strip()))
 
-            events.append(f"{date_str} — {line.strip()}")
+        # lembrete 1 dia antes
+        if today == event_date - timedelta(days=1):
 
-if events:
+            send(f"""
+📢 Postar no LinkedIn amanhã
 
-    message = "📅 Eventos restantes do mês\n\n"
+Evento:
+{line.strip()}
 
-    for e in events:
-        message += f"• {e}\n"
+Data: {date_str}
+""")
 
-    message += "\n💡 Planeje os posts do LinkedIn com antecedência."
+# envio do planejamento semanal (sábado)
+if today.weekday() == 5:
 
-    requests.post(WEBHOOK, json={"text": message})
+    upcoming = []
+
+    for event_date, line in events:
+
+        if today <= event_date <= datetime(today.year, today.month, last_day).date():
+            upcoming.append(line)
+
+    if upcoming:
+
+        message = "📅 Eventos restantes do mês\n\n"
+
+        for e in upcoming:
+            message += f"• {e}\n"
+
+        message += "\n💡 Planeje os posts do LinkedIn."
+
+        send(message)
