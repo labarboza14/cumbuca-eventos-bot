@@ -43,7 +43,7 @@ for url in urls:
 
         events.append((event_date, line.strip()))
 
-        # lembrete 1 dia antes
+        # alerta 1 dia antes
         if today == event_date - timedelta(days=1):
 
             send(f"""
@@ -55,7 +55,7 @@ Evento:
 Data: {date_str}
 """)
 
-# envio do planejamento semanal (sábado)
+# envio do resumo semanal (sábado)
 if today.weekday() == 5:
 
     upcoming = []
