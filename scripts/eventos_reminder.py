@@ -26,12 +26,21 @@ for url in urls:
 
     for line in lines:
 
-        match = re.search(r"\b\d{2}/\d{2}\b", line)
+        # pega datas simples (23/03)
+        single = re.search(r"\b\d{2}/\d{2}\b", line)
 
-        if not match:
+        # pega intervalos (09/03 a 20/03)
+        interval = re.search(r"\b(\d{2}/\d{2})\s*a\s*(\d{2}/\d{2})", line)
+
+        if interval:
+            start, end = interval.groups()
+            date_str = end  # usamos o fim do intervalo
+
+        elif single:
+            date_str = single.group()
+
+        else:
             continue
-
-        date_str = match.group()
 
         day, month = map(int, date_str.split("/"))
 
@@ -42,7 +51,7 @@ for url in urls:
 
         events.append((event_date, line.strip()))
 
-        # aviso 1 dia antes para postar
+        # lembrete 1 dia antes
         if today == event_date - timedelta(days=1):
 
             send(f"""
@@ -54,7 +63,7 @@ Evento:
 Data: {date_str}
 """)
 
-# envio da lista semanal (sábado)
+# resumo semanal (sábado)
 if today.weekday() == 5:
 
     upcoming = []
