@@ -18,10 +18,12 @@ last_day = calendar.monthrange(today.year, today.month)[1]
 events = []
 
 def send_dm(msg):
-    requests.post(WEBHOOK_DM, json={"text": msg})
+    if WEBHOOK_DM:
+        requests.post(WEBHOOK_DM, json={"text": msg})
 
 def send_channel(msg):
-    requests.post(WEBHOOK_CHANNEL, json={"text": msg})
+    if WEBHOOK_CHANNEL:
+        requests.post(WEBHOOK_CHANNEL, json={"text": msg})
 
 for url in urls:
 
