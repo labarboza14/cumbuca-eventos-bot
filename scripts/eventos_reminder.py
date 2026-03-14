@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 import calendar
 import os
 
-WEBHOOK = os.getenv("SLACK_WEBHOOK")
+WEBHOOK_DM = os.getenv("SLACK_WEBHOOK")
+WEBHOOK_CHANNEL = os.getenv("SLACK_WEBHOOK_CHANNEL")
 
 urls = [
     "https://raw.githubusercontent.com/cumbucadev/comunidade/main/docs-temp/planejamento/2026.md",
@@ -16,8 +17,11 @@ last_day = calendar.monthrange(today.year, today.month)[1]
 
 events = []
 
-def send(msg):
-    requests.post(WEBHOOK, json={"text": msg})
+def send_dm(msg):
+    requests.post(WEBHOOK_DM, json={"text": msg})
+
+def send_channel(msg):
+    requests.post(WEBHOOK_CHANNEL, json={"text": msg})
 
 for url in urls:
 
@@ -83,3 +87,4 @@ if today.weekday() == 5:
         message += "\n💡 Planeje os posts do LinkedIn."
 
         send(message)
+        send_channel(message)
