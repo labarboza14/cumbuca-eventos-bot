@@ -13,43 +13,61 @@ urls = [
 today = datetime.utcnow().date()
 
 def send(msg):
+    print("Enviando mensagem para Slack...")
     requests.post(WEBHOOK, json={"text": msg})
+
+seen = set()
 
 for url in urls:
 
-    text = requests.get(url).text
+    print(f"Lendo arquivo: {url}")
+
+    response = requests.get(url)
+    text = response.text
     lines = text.split("\n")
 
     for line in lines:
 
-        date_match = re.search(r"\d{2}/\d{2}/\d{4}", line)
+        date_match = re.search(r"\b\d{2}/\d{2}\b", line)
 
-        if date_match:
+        if not date_match:
+            continue
 
-            date_str = date_match.group()
-            event_date = datetime.strptime(date_str, "%d/%m/%Y").date()
+        date_str = date_match.group()
 
-            seven_days = event_date - timedelta(days=7)
-            one_day = event_date - timedelta(days=1)
+        if date_str in seen:
+            continue
 
-            if today == seven_days:
+        seen.add(date_str)
 
-                send(f"""
+        day, month = map(int, date_str.split("/"))
+
+        try:
+            event_date = datetime(today.year, month, day).date()
+        except:
+            continue
+
+        seven_days = event_date - timedelta(days=7)
+        one_day = event_date - timedelta(days=1)
+
+        if today == seven_days:
+
+            send(f"""
 ✍️ Preparar post de evento
 
 Data do evento: {date_str}
 
-Informação encontrada no GitHub:
-{line}
+Contexto encontrado:
+{line.strip()}
 """)
 
-            if today == one_day:
+        if today == one_day:
 
-                send(f"""
+            send(f"""
 📢 Postar evento amanhã
 
 Data do evento: {date_str}
 
-Informação encontrada no GitHub:
-{line}
+Contexto encontrado:
+{line.strip()}
 """)
