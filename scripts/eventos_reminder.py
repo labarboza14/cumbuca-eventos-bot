@@ -86,5 +86,4 @@ if today.weekday() == 5:
 
         message += "\n💡 Planeje os posts do LinkedIn."
 
-        send(message)
         send_channel(message)
