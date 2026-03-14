@@ -1,6 +1,7 @@
 import requests
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
+import calendar
 import os
 
 WEBHOOK = os.getenv("SLACK_WEBHOOK")
@@ -12,15 +13,11 @@ urls = [
 
 today = datetime.utcnow().date()
 
-def send(msg):
-    print("Enviando mensagem para Slack...")
-    requests.post(WEBHOOK, json={"text": msg})
+last_day = calendar.monthrange(today.year, today.month)[1]
 
-seen = set()
+events = []
 
 for url in urls:
-
-    print(f"Lendo arquivo: {url}")
 
     response = requests.get(url)
     text = response.text
@@ -28,46 +25,31 @@ for url in urls:
 
     for line in lines:
 
-        date_match = re.search(r"\b\d{2}/\d{2}\b", line)
+        match = re.search(r"\b\d{2}/\d{2}\b", line)
 
-        if not date_match:
+        if not match:
             continue
 
-        date_str = date_match.group()
-
-        if date_str in seen:
-            continue
-
-        seen.add(date_str)
+        date_str = match.group()
 
         day, month = map(int, date_str.split("/"))
 
-        try:
-            event_date = datetime(today.year, month, day).date()
-        except:
+        if month != today.month:
             continue
 
-        seven_days = event_date - timedelta(days=7)
-        one_day = event_date - timedelta(days=1)
+        event_date = datetime(today.year, month, day).date()
 
-        if today == seven_days:
+        if today <= event_date <= datetime(today.year, month, last_day).date():
 
-            send(f"""
-✍️ Preparar post de evento
+            events.append(f"{date_str} — {line.strip()}")
 
-Data do evento: {date_str}
+if events:
 
-Contexto encontrado:
-{line.strip()}
-""")
+    message = "📅 Eventos restantes do mês\n\n"
 
-        if today == one_day:
+    for e in events:
+        message += f"• {e}\n"
 
-            send(f"""
-📢 Postar evento amanhã
+    message += "\n💡 Planeje os posts do LinkedIn com antecedência."
 
-Data do evento: {date_str}
-
-Contexto encontrado:
-{line.strip()}
-""")
+    requests.post(WEBHOOK, json={"text": message})
