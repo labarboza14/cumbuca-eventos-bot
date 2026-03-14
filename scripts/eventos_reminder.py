@@ -14,42 +14,51 @@ URLS = [
 today = datetime.utcnow().date()
 year = today.year
 
-print("Hoje:", today)
+print("Executando bot - hoje:", today)
+
+def valid_webhook(url):
+    return url and url.startswith("https://hooks.slack.com")
 
 def send_dm(message):
-    if WEBHOOK_DM:
+    if valid_webhook(WEBHOOK_DM):
         requests.post(WEBHOOK_DM, json={"text": message})
+        print("DM enviada")
+    else:
+        print("Webhook DM inválido ou não configurado")
 
 def send_channel(message):
-    if WEBHOOK_CHANNEL:
+    if valid_webhook(WEBHOOK_CHANNEL):
         requests.post(WEBHOOK_CHANNEL, json={"text": message})
+        print("Mensagem enviada ao canal")
+    else:
+        print("Webhook do canal inválido ou não configurado")
 
 events = []
 
 for url in URLS:
 
-    print("Lendo:", url)
+    print("Lendo arquivo:", url)
 
-    text = requests.get(url).text
+    try:
+        text = requests.get(url).text
+    except Exception as e:
+        print("Erro ao baixar arquivo:", e)
+        continue
+
     lines = text.split("\n")
 
     for line in lines:
 
-        # captura intervalo de datas
         interval = re.search(r"(\d{2}/\d{2})\s*a\s*(\d{2}/\d{2})", line)
+        single = re.search(r"\b\d{2}/\d{2}\b", line)
 
         if interval:
-            start, end = interval.groups()
+            _, end = interval.groups()
             date_str = end
-
-        else:
-
-            single = re.search(r"\b\d{2}/\d{2}\b", line)
-
-            if not single:
-                continue
-
+        elif single:
             date_str = single.group()
+        else:
+            continue
 
         day, month = map(int, date_str.split("/"))
 
@@ -62,9 +71,9 @@ for url in URLS:
 
         events.append((event_date, line.strip()))
 
-# -----------------------
+# ------------------------
 # LEMBRETE 1 DIA ANTES
-# -----------------------
+# ------------------------
 
 for event_date, text in events:
 
@@ -78,9 +87,9 @@ for event_date, text in events:
 """
         )
 
-# -----------------------
+# ------------------------
 # EVENTOS RESTANTES DO MÊS
-# -----------------------
+# ------------------------
 
 month_events = []
 
@@ -102,4 +111,5 @@ if month_events:
 
 else:
 
-    print("Nenhum evento restante no mês")
+    print("Nenhum evento restante neste mês")
+
