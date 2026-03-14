@@ -1,7 +1,6 @@
 import requests
 import re
 from datetime import datetime, timedelta
-import calendar
 import os
 
 WEBHOOK_DM = os.getenv("SLACK_WEBHOOK")
@@ -13,17 +12,20 @@ urls = [
 ]
 
 today = datetime.utcnow().date()
-last_day = calendar.monthrange(today.year, today.month)[1]
-
-events = []
 
 def send_dm(msg):
-    if WEBHOOK_DM:
+    if WEBHOOK_DM and WEBHOOK_DM.startswith("https://"):
         requests.post(WEBHOOK_DM, json={"text": msg})
+    else:
+        print("Webhook DM não configurado")
 
 def send_channel(msg):
-    if WEBHOOK_CHANNEL:
+    if WEBHOOK_CHANNEL and WEBHOOK_CHANNEL.startswith("https://"):
         requests.post(WEBHOOK_CHANNEL, json={"text": msg})
+    else:
+        print("Webhook do canal não configurado")
+
+events = []
 
 for url in urls:
 
@@ -32,15 +34,15 @@ for url in urls:
 
     for line in lines:
 
-        # pega datas simples (23/03)
+        # datas simples
         single = re.search(r"\b\d{2}/\d{2}\b", line)
 
-        # pega intervalos (09/03 a 20/03)
+        # datas com intervalo
         interval = re.search(r"\b(\d{2}/\d{2})\s*a\s*(\d{2}/\d{2})", line)
 
         if interval:
             start, end = interval.groups()
-            date_str = end  # usamos o fim do intervalo
+            date_str = end
 
         elif single:
             date_str = single.group()
@@ -50,42 +52,35 @@ for url in urls:
 
         day, month = map(int, date_str.split("/"))
 
-        if month != today.month:
+        try:
+            event_date = datetime(today.year, month, day).date()
+        except:
             continue
-
-        event_date = datetime(today.year, month, day).date()
 
         events.append((event_date, line.strip()))
 
         # lembrete 1 dia antes
         if today == event_date - timedelta(days=1):
 
-            send(f"""
+            send_dm(f"""
 📢 Postar no LinkedIn amanhã
 
-Evento:
 {line.strip()}
-
-Data: {date_str}
 """)
 
-# resumo semanal (sábado)
-if today.weekday() == 5:
+# eventos da semana para o canal
+week_events = []
 
-    upcoming = []
+for event_date, line in events:
 
-    for event_date, line in events:
+    if today <= event_date <= today + timedelta(days=7):
+        week_events.append(line)
 
-        if today <= event_date <= datetime(today.year, today.month, last_day).date():
-            upcoming.append(line)
+if week_events:
 
-    if upcoming:
+    message = "📅 Agenda da semana — Cumbuca Dev\n\n"
 
-        message = "📅 Eventos restantes do mês\n\n"
+    for e in week_events:
+        message += f"• {e}\n"
 
-        for e in upcoming:
-            message += f"• {e}\n"
-
-        message += "\n💡 Planeje os posts do LinkedIn."
-
-        send_channel(message)
+    send_channel(message)
